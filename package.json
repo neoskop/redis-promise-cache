@@ -1,0 +1,34 @@
+{
+  "name": "@neoskop/redis-promise-cache",
+  "version": "0.0.0",
+  "description": "Store promises and synchrone values in redis",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/neoskop/redis-promise-cache"
+  },
+  "bugs": {
+    "url": "https://github.com/neoskop/redis-promise-cache/issues"
+  },
+  "scripts": {
+    "build": "tsc",
+    "test": "jest --reporters jest-spec-reporter",
+    "test:watch": "jest --watch --reporters jest-spec-reporter",
+    "test:cov": "jest --coverage --reporters jest-spec-reporter --coverage-reporters html",
+    "test:debug": "node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand"
+  },
+  "author": "Mark Wecke <wecke@neoskop.de>",
+  "license": "MIT",
+  "devDependencies": {
+    "@types/jest": "24.0.17",
+    "jest": "24.8.0",
+    "jest-spec-reporter": "1.0.6",
+    "ts-jest": "24.0.2",
+    "typescript": "3.5.3"
+  },
+  "dependencies": {
+    "@types/redis": "2.8.13",
+    "redis": "2.8.0",
+    "rxjs": "6.5.2",
+    "tslib": "1.10.0"
+  }
+}
