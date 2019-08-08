@@ -25,6 +25,7 @@
   },
   "author": "Mark Wecke <wecke@neoskop.de>",
   "license": "MIT",
+  "main": "dist/index.js",
   "devDependencies": {
     "@types/jest": "24.0.17",
     "coveralls": "3.0.6",
