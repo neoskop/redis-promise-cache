@@ -15,41 +15,38 @@ export class PublishEvent {
         public readonly value : string) {}
 }
 
-export interface RedisPromiseCacheOptions extends RedisOptions {
+export interface RedisPromiseCacheOptions {
     resourceTag: string;
+    ttl?: number;
 }
 
-export class RedisPromiseCache {
+export class RedisPromiseCache<R = Json> {
     client: Redis;
     subscriber: Redis;
-    clientOptions : RedisOptions;
-    resourceTag: string;
-
 
     events = new Observable<PublishEvent>(sub => {
         const listener = (_: string, channel: string, message: string) => {
             sub.next(new PublishEvent(channel, message))
         };
         this.subscriber.on('pmessage', listener);
-        this.subscriber.psubscribe(`notify/urn:${this.resourceTag}:*`);
+        this.subscriber.psubscribe(`notify/urn:${this.options.resourceTag}:*`);
     });
 
-    constructor({ resourceTag, ...options }: RedisPromiseCacheOptions) {
-        this.clientOptions = options;
-        this.resourceTag = resourceTag;
-        this.client = new RedisClient(options);
-        this.subscriber = new RedisClient(options);
+    constructor(protected readonly options: RedisPromiseCacheOptions,
+        protected readonly clientOptions?: RedisOptions) {
+        this.client = new RedisClient(clientOptions);
+        this.subscriber = new RedisClient(clientOptions);
     }
 
     protected getKey(key : string) {
-        return `urn:${this.resourceTag}:${key}`;
+        return `urn:${this.options.resourceTag}:${key}`;
     }
 
     protected getNotificationKey(key : string) {
         return `notify/${key}`
     }
 
-    async get<T>(key: string): Promise<T | null> {
+    async get<T extends R = R>(key: string): Promise<T | null> {
         key = this.getKey(key);
         const res = await this._get(key);
 
@@ -68,15 +65,15 @@ export class RedisPromiseCache {
         return JSON.parse(res) as T;
     }
 
-    async set(key: string, value: Json | Promise<Json>, { timeout = 10, ttl }: { timeout?: number, ttl?: number } = {}): Promise<void> {
+    async set(key: string, value: R | Promise<R>, { timeout = 10, ttl = this.options.ttl }: { timeout?: number, ttl?: number } = {}): Promise<void> {
         key = this.getKey(key);
         if (isPromise(value)) {
             await this._set(key, PROMISE_VALUE, { ttl: timeout });
             (async () => {
                 try {
-                    value = JSON.stringify(await value);
-                    await this._set(key, value , { ttl });
-                    await this.client.publish(this.getNotificationKey(key), value);
+                    const strValue = JSON.stringify(await value);
+                    await this._set(key, strValue , { ttl });
+                    await this.client.publish(this.getNotificationKey(key), strValue);
                 } catch {
                     await this.del(key);
                     await this.client.publish(this.getNotificationKey(key), '');

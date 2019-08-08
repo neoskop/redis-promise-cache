@@ -10,7 +10,7 @@ describe('RedisPromiseCache', () => {
             db: 15
         });
         client.flushall();
-        cache = new RedisPromiseCache({ db: 15, resourceTag: 'test' });
+        cache = new RedisPromiseCache({ resourceTag: 'test' }, { db: 15 });
         await sleep(100);
     });
 
