@@ -60,6 +60,22 @@ describe('RedisPromiseCache', () => {
         expect(await cache.get('foo')).toBeNull();
         expect(Date.now() - start).toBeCloseTo(1000, -2.5);
     })
+
+    describe('getResource', () => {
+        it('should resole with synchrone value', async () => {
+            expect(await cache.getResource('test', () => 'foobar')).toBe('foobar');
+        })
+        it('should resole with asynchrone value', async () => {
+            expect(await cache.getResource('test2', () => resolveIn('foobar2', 500))).toBe('foobar2');
+        })
+        it('should resole with delayed value and not call second resolver', async () => {
+            const fn = jest.fn();
+            cache.getResource('test3', () => resolveIn('foobar3', 500));
+            await sleep(10);
+            expect(await cache.getResource('test3', fn)).toBe('foobar3');
+            expect(fn).not.toHaveBeenCalled();
+        })
+    })
 });
 
 

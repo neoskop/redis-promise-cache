@@ -119,6 +119,17 @@ export class RedisPromiseCache {
     async del(key: string) {
         await this.client.del(key);
     }
+
+    async getResource<T extends Json>(id : string, resolver : () => T|Promise<T>) : Promise<T> {
+        const cached = await this.get<T>(id);
+        if(cached) {
+            return cached;
+        }
+
+        const promise = resolver();
+        this.set(id, promise);
+        return promise;
+    }
 }
 
 function isPromise(v : any) : v is Promise<any> {
