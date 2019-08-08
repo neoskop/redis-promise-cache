@@ -59,6 +59,13 @@ describe('RedisPromiseCache', () => {
         await sleep(1050);
         expect(await cache.get('foo')).toBeNull();
         expect(Date.now() - start).toBeCloseTo(1050, -2.5);
+    });
+
+    it('should expire after given ttl', async () => {
+        await cache.set('foo', 'bar', { ttl: 3 });
+
+        await sleep(3050);
+        expect(await cache.get('foo')).toBeNull();
     })
 
     describe('getResource', () => {
@@ -74,6 +81,25 @@ describe('RedisPromiseCache', () => {
             await sleep(10);
             expect(await cache.getResource('test3', fn)).toBe('foobar3');
             expect(fn).not.toHaveBeenCalled();
+        })
+    })
+
+    describe('flush', () => {
+        it('should delete all entries for this cache', async () => {
+            const cache2 = new RedisPromiseCache({ resourceTag: 'test2' }, { db: 15 });
+            await cache.set('test', 'foo');
+            await cache2.set('test', 'bar');
+
+            expect(await cache.get('test')).toBe('foo');
+            expect(await cache2.get('test')).toBe('bar');
+
+            await cache.flush();
+
+            expect(await cache.get('test')).toBeNull();
+            expect(await cache2.get('test')).toBe('bar');
+
+            cache2.client.quit();
+            cache2.subscriber.quit();
         })
     })
 });
