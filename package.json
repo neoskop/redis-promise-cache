@@ -2,6 +2,12 @@
   "name": "@neoskop/redis-promise-cache",
   "version": "0.0.0",
   "description": "Store promises and synchrone values in redis",
+  "keywords": [
+    "promise",
+    "redis",
+    "cache",
+    "typescript"
+  ],
   "repository": {
     "type": "git",
     "url": "https://github.com/neoskop/redis-promise-cache"
