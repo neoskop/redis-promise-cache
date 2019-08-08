@@ -25,7 +25,7 @@
     "coveralls": "cat coverage/lcov.info | coveralls",
     "publish-next": "npm run build && npm publish --tag next",
     "publish-latest-only": "npm run build && npm publish",
-    "publish-latest": "npm run publish-latest-only && npm dist-tag add @neoskop/bouch@`jq '.version' package.json -r` next"
+    "publish-latest": "npm run publish-latest-only && npm dist-tag add @neoskop/redis-promise-cache@`jq '.version' package.json -r` next"
   },
   "author": "Mark Wecke <wecke@neoskop.de>",
   "license": "MIT",
