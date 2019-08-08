@@ -117,7 +117,16 @@ export class RedisPromiseCache<R = Json> {
         await this.client.del(key);
     }
 
-    async getResource<T extends Json>(id : string, resolver : () => T|Promise<T>) : Promise<T> {
+    async flush() {
+        const pipeline = this.client.pipeline();
+        for(const key of await this.client.keys(this.getKey('*'))) {
+            pipeline.del(key);
+        }
+
+        return pipeline.exec();
+    }
+
+    async getResource<T extends R = R>(id : string, resolver : () => T|Promise<T>) : Promise<T> {
         const cached = await this.get<T>(id);
         if(cached) {
             return cached;
