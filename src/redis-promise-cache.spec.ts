@@ -56,9 +56,9 @@ describe('RedisPromiseCache', () => {
         const start = Date.now();
         await cache.set('foo', resolveIn('bar', 1750), { timeout: 1 });
 
-        await sleep(1000);
+        await sleep(1050);
         expect(await cache.get('foo')).toBeNull();
-        expect(Date.now() - start).toBeCloseTo(1000, -2.5);
+        expect(Date.now() - start).toBeCloseTo(1050, -2.5);
     })
 
     describe('getResource', () => {
