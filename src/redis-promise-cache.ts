@@ -119,11 +119,60 @@ export class RedisPromiseCache<R = Json> {
 
     async flush() {
         const pipeline = this.client.pipeline();
-        for(const key of await this.client.keys(this.getKey('*'))) {
+        for(const key of await this.keys()) {
             pipeline.del(key);
         }
 
         return pipeline.exec();
+    }
+
+    keys() {
+        return this.client.keys(this.getKey('*'));
+    }
+
+    async values() : Promise<(Json|null)[]> {
+        const pipeline = this.client.pipeline();
+        for(const key of await this.keys()) {
+            pipeline.get(key);
+        }
+
+        const result = await pipeline.exec();
+
+        return result.map(([ err, result ] : [ any, string ]) => {
+            /* istanbul ignore if */
+            if(err) {
+                throw err;
+            }
+            if(result === PROMISE_VALUE) {
+                return null;
+            } else {
+                return JSON.parse(result);
+            }
+        })
+    }
+
+    async entries() : Promise<[ string, Json | null][]> {
+        const pipeline = this.client.pipeline();
+        const keys = await this.keys();
+        for(const key of keys) {
+            pipeline.get(key);
+        }
+
+        const result = await pipeline.exec();
+
+        const length = this.getKey('').length;
+
+        return result.map(([ err, result ] : [ any, string ], index : number) => {
+            /* istanbul ignore if */
+            if(err) {
+                throw err;
+            }
+            if(result === PROMISE_VALUE) {
+                return [ keys[index].substr(length), null ];
+            } else {
+                return [ keys[index].substr(length), JSON.parse(result) ];
+            }
+        })
     }
 
     async getResource<T extends R = R>(id : string, resolver : () => T|Promise<T>) : Promise<T> {
