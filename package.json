@@ -16,6 +16,7 @@
     "url": "https://github.com/neoskop/redis-promise-cache/issues"
   },
   "scripts": {
+    "prebuild": "yarn test",
     "build": "tsc",
     "test": "jest --reporters jest-spec-reporter",
     "test:watch": "jest --watch --reporters jest-spec-reporter",
