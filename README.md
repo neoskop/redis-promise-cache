@@ -1,4 +1,7 @@
-# @neoskop/redis-promise-cache
+# @neoskop/redis-promise-cache  
+
+![Build](https://travis-ci.org/neoskop/redis-promise-cache.svg?branch=master)
+![Coverage](https://coveralls.io/repos/github/neoskop/redis-promise-cache/badge.svg?branch=master)
 
 Store promises and synchrone values in redis.
 
