@@ -68,7 +68,7 @@ describe('RedisPromiseCache', () => {
         expect(await cache.get('foo')).toBeNull();
     })
 
-    describe('getResource', () => {
+    describe('getResource()', () => {
         it('should resole with synchrone value', async () => {
             expect(await cache.getResource('test', () => 'foobar')).toBe('foobar');
         })
@@ -84,7 +84,7 @@ describe('RedisPromiseCache', () => {
         })
     })
 
-    describe('flush', () => {
+    describe('flush()', () => {
         it('should delete all entries for this cache', async () => {
             const cache2 = new RedisPromiseCache({ resourceTag: 'test2' }, { db: 15 });
             await cache.set('test', 'foo');
@@ -101,7 +101,29 @@ describe('RedisPromiseCache', () => {
             cache2.client.quit();
             cache2.subscriber.quit();
         })
-    })
+    });
+
+    describe('values()', () => {
+        it('should return all values', async () => {
+            await cache.set('foo', 1);
+            await cache.set('bar', 2);
+            await cache.set('baz', 3);
+            await cache.set('foobar', resolveIn(4, 1000));
+
+            expect((await cache.values()).sort()).toEqual([ 1, 2, 3, null ].sort());
+        })
+    });
+
+    describe('entries()', () => {
+        it('should return all values', async () => {
+            await cache.set('foo', 1);
+            await cache.set('bar', 2);
+            await cache.set('baz', 3);
+            await cache.set('foobar', resolveIn(4, 1000));
+
+            expect((await cache.entries()).sort()).toEqual([ [ 'foo', 1], [ 'bar', 2 ], [ 'baz', 3 ], [ 'foobar', null] ].sort());
+        })
+    });
 });
 
 
