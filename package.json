@@ -1,6 +1,6 @@
 {
   "name": "@neoskop/redis-promise-cache",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Store promises and synchrone values in redis",
   "keywords": [
     "promise",
