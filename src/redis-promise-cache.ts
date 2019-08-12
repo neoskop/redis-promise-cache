@@ -175,10 +175,12 @@ export class RedisPromiseCache<R = Json> {
         })
     }
 
-    async getResource<T extends R = R>(id : string, resolver : () => T|Promise<T>) : Promise<T> {
-        const cached = await this.get<T>(id);
-        if(cached) {
-            return cached;
+    async getResource<T extends R = R>(id : string, resolver : () => T|Promise<T>, options : { noCache?: boolean } = {}) : Promise<T> {
+        if(!options.noCache) {
+            const cached = await this.get<T>(id);
+            if(cached) {
+                return cached;
+            }
         }
 
         const promise = resolver();
