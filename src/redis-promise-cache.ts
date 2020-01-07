@@ -75,8 +75,10 @@ export class RedisPromiseCache<R = Json> {
                     await this._set(key, strValue , { ttl });
                     await this.client.publish(this.getNotificationKey(key), strValue);
                 } catch {
-                    await this.del(key);
-                    await this.client.publish(this.getNotificationKey(key), '');
+                    try {
+                        await this.del(key);
+                        await this.client.publish(this.getNotificationKey(key), '');
+                    } catch {}
                 }
             })()
         } else {
