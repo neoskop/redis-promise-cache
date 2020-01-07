@@ -1,6 +1,6 @@
 import RedisClient, { Redis, RedisOptions } from 'ioredis';
-import { Observable } from 'rxjs';
-import { filter, first, map } from 'rxjs/operators';
+import { concat, from, Observable, of } from 'rxjs';
+import { filter, first, map, share, switchMap } from 'rxjs/operators';
 
 const PROMISE_VALUE = '<!-PROMISE_VALUE-!>';
 
@@ -11,8 +11,13 @@ export interface JsonArray extends Array<Json> { }
 export type Json = JsonObject | JsonArray | string | number | boolean | null;
 
 export class PublishEvent {
-    constructor(public readonly key : string,
-        public readonly value : string) {}
+    constructor(public readonly key: string,
+        public readonly value: string) { }
+}
+
+export class RedisEvent {
+    constructor(public readonly type: string,
+        public readonly key: string) { }
 }
 
 export interface RedisPromiseCacheOptions {
@@ -20,49 +25,49 @@ export interface RedisPromiseCacheOptions {
     ttl?: number;
 }
 
+const REDIS_KEYEVENT_REGEXP = /^__keyevent@(\d+)__:(.+)$/;
+
 export class RedisPromiseCache<R = Json> {
     client: Redis;
     subscriber: Redis;
 
-    events = new Observable<PublishEvent>(sub => {
-        const listener = (_: string, channel: string, message: string) => {
-            sub.next(new PublishEvent(channel, message))
-        };
-        this.subscriber.on('pmessage', listener);
-        this.subscriber.psubscribe(`notify/urn:${this.options.resourceTag}:*`);
-    });
+    events: Observable<RedisEvent> = new Observable<RedisEvent>(sub => {
+        this.subscriber.psubscribe(`__keyevent@${this.clientOptions?.db || 0}__:*`)
+            .then(
+                () => {
+                    this.subscriber.on('pmessage', (_, event, key) => {
+                        const type = REDIS_KEYEVENT_REGEXP.exec(event)![2];
+                        sub.next(new RedisEvent(type, key));
+                    })
+                },
+                err => {
+                    sub.error(err);
+                }
+            );
+    }).pipe(share());
 
     constructor(protected readonly options: RedisPromiseCacheOptions,
         protected readonly clientOptions?: RedisOptions) {
         this.client = new RedisClient(clientOptions);
+        this.client.config('SET', 'notify-keyspace-events', 'g$Ex');
         this.subscriber = new RedisClient(clientOptions);
+        this.events.subscribe();
     }
 
-    protected getKey(key : string) {
+    protected getKey(key: string) {
         return `urn:${this.options.resourceTag}:${key}`;
-    }
-
-    protected getNotificationKey(key : string) {
-        return `notify/${key}`
     }
 
     async get<T extends R = R>(key: string): Promise<T | null> {
         key = this.getKey(key);
-        const res = await this._get(key);
 
-        if (!res) {
-            return null;
-        }
-
-        if (res === PROMISE_VALUE) {
-            return this.events.pipe(
-                filter(e => e.key === this.getNotificationKey(key)),
-                first(),
-                map(e => e.value ? JSON.parse(e.value) : null)
-            ).toPromise();
-        }
-
-        return JSON.parse(res) as T;
+        return concat(of(null), this.events.pipe(
+            filter(e => e.key === key && ['set', 'del', 'expire'].includes(e.type))
+        )).pipe(
+            switchMap(() => from(this._get(key))),
+            first(res => res !== PROMISE_VALUE),
+            map(res => !res ? null : JSON.parse(res) as T)
+        ).toPromise();
     }
 
     async set(key: string, value: R | Promise<R>, { timeout = 10, ttl = this.options.ttl }: { timeout?: number, ttl?: number } = {}): Promise<void> {
@@ -72,13 +77,9 @@ export class RedisPromiseCache<R = Json> {
             (async () => {
                 try {
                     const strValue = JSON.stringify(await value);
-                    await this._set(key, strValue , { ttl });
-                    await this.client.publish(this.getNotificationKey(key), strValue);
+                    await this._set(key, strValue, { ttl });
                 } catch {
-                    try {
-                        await this.del(key);
-                        await this.client.publish(this.getNotificationKey(key), '');
-                    } catch {}
+                    await this.del(key);
                 }
             })()
         } else {
@@ -88,7 +89,7 @@ export class RedisPromiseCache<R = Json> {
 
     protected _get(key: string): Promise<string | null> {
         return new Promise((resolve, reject) => {
-            this.client.get(key, (err: Error, res: string|null) => {
+            this.client.get(key, (err: Error, res: string | null) => {
                 /* istanbul ignore if */
                 if (err) {
                     return reject(err);
@@ -121,7 +122,7 @@ export class RedisPromiseCache<R = Json> {
 
     async flush() {
         const pipeline = this.client.pipeline();
-        for(const key of await this.keys()) {
+        for (const key of await this.keys()) {
             pipeline.del(key);
         }
 
@@ -132,20 +133,20 @@ export class RedisPromiseCache<R = Json> {
         return this.client.keys(this.getKey('*'));
     }
 
-    async values() : Promise<(Json|null)[]> {
+    async values(): Promise<(Json | null)[]> {
         const pipeline = this.client.pipeline();
-        for(const key of await this.keys()) {
+        for (const key of await this.keys()) {
             pipeline.get(key);
         }
 
         const result = await pipeline.exec();
 
-        return result.map(([ err, result ] : [ any, string ]) => {
+        return result.map(([err, result]: [any, string]) => {
             /* istanbul ignore if */
-            if(err) {
+            if (err) {
                 throw err;
             }
-            if(result === PROMISE_VALUE) {
+            if (result === PROMISE_VALUE) {
                 return null;
             } else {
                 return JSON.parse(result);
@@ -153,10 +154,10 @@ export class RedisPromiseCache<R = Json> {
         })
     }
 
-    async entries() : Promise<[ string, Json | null][]> {
+    async entries(): Promise<[string, Json | null][]> {
         const pipeline = this.client.pipeline();
         const keys = await this.keys();
-        for(const key of keys) {
+        for (const key of keys) {
             pipeline.get(key);
         }
 
@@ -164,23 +165,23 @@ export class RedisPromiseCache<R = Json> {
 
         const length = this.getKey('').length;
 
-        return result.map(([ err, result ] : [ any, string ], index : number) => {
+        return result.map(([err, result]: [any, string], index: number) => {
             /* istanbul ignore if */
-            if(err) {
+            if (err) {
                 throw err;
             }
-            if(result === PROMISE_VALUE) {
-                return [ keys[index].substr(length), null ];
+            if (result === PROMISE_VALUE) {
+                return [keys[index].substr(length), null];
             } else {
-                return [ keys[index].substr(length), JSON.parse(result) ];
+                return [keys[index].substr(length), JSON.parse(result)];
             }
         })
     }
 
-    async getResource<T extends R = R>(id : string, resolver : () => T|Promise<T>, options : { noCache?: boolean } = {}) : Promise<T> {
-        if(!options.noCache) {
+    async getResource<T extends R = R>(id: string, resolver: () => T | Promise<T>, options: { noCache?: boolean } = {}): Promise<T> {
+        if (!options.noCache) {
             const cached = await this.get<T>(id);
-            if(cached) {
+            if (cached) {
                 return cached;
             }
         }
@@ -191,6 +192,6 @@ export class RedisPromiseCache<R = Json> {
     }
 }
 
-function isPromise(v : any) : v is Promise<any> {
+function isPromise(v: any): v is Promise<any> {
     return v && v.then && v.catch;
 }
