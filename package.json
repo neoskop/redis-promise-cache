@@ -1,6 +1,6 @@
 {
   "name": "@neoskop/redis-promise-cache",
-  "version": "0.4.1",
+  "version": "0.4.2",
   "description": "Store promises and synchrone values in redis",
   "keywords": [
     "promise",
@@ -32,18 +32,23 @@
   "main": "dist/index.js",
   "typings": "dist/index.d.ts",
   "devDependencies": {
-    "@types/jest": "24.0.25",
-    "coveralls": "3.0.9",
-    "jest": "24.9.0",
-    "jest-spec-reporter": "1.0.10",
-    "ts-jest": "24.3.0",
-    "ts-node": "8.5.4",
-    "typescript": "3.7.4"
+    "@types/ioredis": ">=4.14.3",
+    "@types/jest": "27.4.0",
+    "@types/node": "^17.0.13",
+    "coveralls": "3.1.1",
+    "ioredis": ">=4.14.1",
+    "jest": "27.4.7",
+    "jest-spec-reporter": "1.0.17",
+    "rxjs": "6.6.7",
+    "ts-jest": "27.1.3",
+    "ts-node": "10.4.0",
+    "tslib": ">=1.10.0",
+    "typescript": "^4.5.5"
   },
-  "dependencies": {
+  "peerDependencies": {
     "@types/ioredis": ">=4.14.3",
     "ioredis": ">=4.14.1",
-    "rxjs": ">=6.5.4",
+    "rxjs": ">= 6.0.0 < 7.0.0",
     "tslib": ">=1.10.0"
   }
 }
