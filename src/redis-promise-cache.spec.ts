@@ -72,6 +72,13 @@ describe('RedisPromiseCache', () => {
         expect(await cache.get('foo4')).toBeNull();
     })
 
+    it('should delete an entry', async () => {
+        await cache.set('foo5', 'bar');
+
+        await cache.del('foo5');
+        expect(await cache.get('foo5')).toBeNull();
+    })
+
     describe('getResource()', () => {
         it('should resolve with synchrone value', async () => {
             expect(await cache.getResource('test', () => 'foobar')).toBe('foobar');

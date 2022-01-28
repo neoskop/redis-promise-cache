@@ -71,19 +71,19 @@ export class RedisPromiseCache<R = Json> {
     }
 
     async set(key: string, value: R | Promise<R>, { timeout = 10, ttl = this.options.ttl }: { timeout?: number, ttl?: number } = {}): Promise<void> {
-        key = this.getKey(key);
+        const prefixedKey = this.getKey(key);
         if (isPromise(value)) {
-            await this._set(key, PROMISE_VALUE, { ttl: timeout });
+            await this._set(prefixedKey, PROMISE_VALUE, { ttl: timeout });
             (async () => {
                 try {
                     const strValue = JSON.stringify(await value);
-                    await this._set(key, strValue, { ttl });
+                    await this._set(prefixedKey, strValue, { ttl });
                 } catch {
                     await this.del(key);
                 }
             })()
         } else {
-            await this._set(key, JSON.stringify(value), { ttl });
+            await this._set(prefixedKey, JSON.stringify(value), { ttl });
         }
     }
 
@@ -117,7 +117,7 @@ export class RedisPromiseCache<R = Json> {
     }
 
     async del(key: string) {
-        await this.client.del(key);
+        await this.client.del(this.getKey(key));
     }
 
     async flush() {
