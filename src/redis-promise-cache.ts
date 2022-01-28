@@ -89,7 +89,7 @@ export class RedisPromiseCache<R = Json> {
 
     protected _get(key: string): Promise<string | null> {
         return new Promise((resolve, reject) => {
-            this.client.get(key, (err: Error, res: string | null) => {
+            this.client.get(key, (err: Error | null, res: string | null) => {
                 /* istanbul ignore if */
                 if (err) {
                     return reject(err);
@@ -101,7 +101,7 @@ export class RedisPromiseCache<R = Json> {
 
     protected _set(key: string, value: string, { ttl }: { ttl?: number }): Promise<void> {
         return new Promise((resolve, reject) => {
-            const cb = (err: Error) => {
+            const cb = (err: Error | null) => {
                 /* istanbul ignore if */
                 if (err) {
                     return reject(err);
